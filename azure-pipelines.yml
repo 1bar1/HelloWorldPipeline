@@ -33,8 +33,8 @@ steps:
     echo "New Version: $NEW_VERSION"
   displayName: 'Increment and print version'
 
-# SonarCloud - ONLY on feature branches
-- task: SonarCloudPrepare@1
+# SonarCloud - ONLY on feature branches (using newer version)
+- task: SonarCloudPrepare@2
   condition: eq(variables.isFeature, true)
   displayName: 'Prepare SonarCloud analysis'
   inputs:
@@ -52,9 +52,15 @@ steps:
     arguments: '--configuration $(buildConfiguration) /p:Version=$(buildVersion)'
 
 # SonarCloud analyze - ONLY on feature branches
-- task: SonarCloudAnalyze@1
+- task: SonarCloudAnalyze@2
   condition: eq(variables.isFeature, true)
   displayName: 'Run SonarCloud analysis'
+
+- task: SonarCloudPublish@2
+  condition: eq(variables.isFeature, true)
+  displayName: 'Publish SonarCloud results'
+  inputs:
+    pollingTimeoutSec: '300'
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish project'
@@ -63,17 +69,49 @@ steps:
     publishWebProjects: false
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) /p:Version=$(buildVersion)'
-    zipAfterPublish: true
+    zipAfterPublish: false
+
+# Create NuGet package - ONLY on feature branches
+- task: DotNetCoreCLI@2
+  condition: eq(variables.isFeature, true)
+  displayName: 'Create NuGet Package'
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/*.csproj'
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'buildVersion'
+    outputDir: '$(Build.ArtifactStagingDirectory)/nuget'
+
+# Push NuGet to Artifacts Feed - ONLY on feature branches
+- task: NuGetCommand@2
+  condition: eq(variables.isFeature, true)
+  displayName: 'Push NuGet to Artifacts Feed'
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'HelloWorldFeed'
+
+# Tag artifact name with branch and version
+- script: |
+    BRANCH_NAME=$(echo "$(Build.SourceBranch)" | sed 's/refs\/heads\///g' | sed 's/\//_/g')
+    ARTIFACT_NAME="${BRANCH_NAME}_$(buildVersion)"
+    echo "##vso[task.setvariable variable=taggedArtifactName]$ARTIFACT_NAME"
+    echo "Artifact will be named: $ARTIFACT_NAME"
+    echo "Version: $(buildVersion)"
+  displayName: 'Set artifact name with branch and version'
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Upload to Pipeline Artifacts'
+  displayName: 'Upload tagged artifacts'
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: '$(artifactName)-$(buildVersion)'
+    ArtifactName: '$(taggedArtifactName)'
     publishLocation: 'Container'
 
 - script: |
-    echo "Build completed with version: $(buildVersion)"
+    echo "Build completed!"
+    echo "Version: $(buildVersion)"
     echo "Branch: $(Build.SourceBranchName)"
     echo "Is Feature Branch: $(isFeature)"
-  displayName: 'Print build info'
+    echo "Artifact Name: $(taggedArtifactName)"
+  displayName: 'Print final build info'
