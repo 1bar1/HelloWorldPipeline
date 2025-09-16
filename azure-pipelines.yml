@@ -1,5 +1,6 @@
 trigger:
 - main
+- feature/*
 
 pool:
   name: 'LocalAgent'
@@ -7,6 +8,8 @@ pool:
 variables:
   buildConfiguration: 'Release'
   artifactName: 'HelloWorldApp'
+  isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  isFeature: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/')]
 
 steps:
 - task: DotNetCoreCLI@2
@@ -16,28 +19,30 @@ steps:
     projects: '**/*.csproj'
 
 - script: |
-    # Read current version
     if [ -f version.txt ]; then
       VERSION=$(cat version.txt)
     else
       VERSION="1.0.0"
     fi
-    
-    # Split version and increment patch number
     IFS='.' read -r major minor patch <<< "$VERSION"
     patch=$((patch + 1))
     NEW_VERSION="$major.$minor.$patch"
-    
-    # Save new version
     echo $NEW_VERSION > version.txt
-    
-    # Set pipeline variable
     echo "##vso[task.setvariable variable=buildVersion]$NEW_VERSION"
-    
-    # Print to console
     echo "Current Version: $VERSION"
     echo "New Version: $NEW_VERSION"
   displayName: 'Increment and print version'
+
+# SonarCloud - ONLY on feature branches
+- task: SonarCloudPrepare@1
+  condition: eq(variables.isFeature, true)
+  displayName: 'Prepare SonarCloud analysis'
+  inputs:
+    SonarCloud: 'SonarCloudConnection'
+    organization: '1bar1'
+    scannerMode: 'MSBuild'
+    projectKey: '1bar1'
+    projectName: 'HelloWorldPipeline'
 
 - task: DotNetCoreCLI@2
   displayName: 'Build project'
@@ -45,6 +50,11 @@ steps:
     command: 'build'
     projects: '**/*.csproj'
     arguments: '--configuration $(buildConfiguration) /p:Version=$(buildVersion)'
+
+# SonarCloud analyze - ONLY on feature branches
+- task: SonarCloudAnalyze@1
+  condition: eq(variables.isFeature, true)
+  displayName: 'Run SonarCloud analysis'
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish project'
@@ -64,4 +74,6 @@ steps:
 
 - script: |
     echo "Build completed with version: $(buildVersion)"
-  displayName: 'Print final version'
+    echo "Branch: $(Build.SourceBranchName)"
+    echo "Is Feature Branch: $(isFeature)"
+  displayName: 'Print build info'
