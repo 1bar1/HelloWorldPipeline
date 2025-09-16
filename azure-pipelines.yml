@@ -15,12 +15,36 @@ steps:
     command: 'restore'
     projects: '**/*.csproj'
 
+- script: |
+    # Read current version
+    if [ -f version.txt ]; then
+      VERSION=$(cat version.txt)
+    else
+      VERSION="1.0.0"
+    fi
+    
+    # Split version and increment patch number
+    IFS='.' read -r major minor patch <<< "$VERSION"
+    patch=$((patch + 1))
+    NEW_VERSION="$major.$minor.$patch"
+    
+    # Save new version
+    echo $NEW_VERSION > version.txt
+    
+    # Set pipeline variable
+    echo "##vso[task.setvariable variable=buildVersion]$NEW_VERSION"
+    
+    # Print to console
+    echo "Current Version: $VERSION"
+    echo "New Version: $NEW_VERSION"
+  displayName: 'Increment and print version'
+
 - task: DotNetCoreCLI@2
   displayName: 'Build project'
   inputs:
     command: 'build'
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
+    arguments: '--configuration $(buildConfiguration) /p:Version=$(buildVersion)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Publish project'
@@ -28,16 +52,16 @@ steps:
     command: 'publish'
     publishWebProjects: false
     projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) /p:Version=$(buildVersion)'
     zipAfterPublish: true
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Upload to Azure Artifacts'
+  displayName: 'Upload to Pipeline Artifacts'
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: '$(artifactName)'
+    ArtifactName: '$(artifactName)-$(buildVersion)'
     publishLocation: 'Container'
 
 - script: |
-    echo "Build and upload completed successfully!"
-  displayName: 'Print success message'
+    echo "Build completed with version: $(buildVersion)"
+  displayName: 'Print final version'
