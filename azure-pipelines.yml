@@ -41,7 +41,7 @@ steps:
     SonarCloud: 'SonarCloudConnection'
     organization: '1bar1'
     scannerMode: 'MSBuild'
-    projectKey: '1bar1'
+    projectKey: '1bar1_HelloWorldPipeline'
     projectName: 'HelloWorldPipeline'
 
 - task: DotNetCoreCLI@2
