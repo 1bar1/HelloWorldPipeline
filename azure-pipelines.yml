@@ -39,9 +39,9 @@ steps:
   displayName: 'Prepare SonarCloud analysis'
   inputs:
     SonarCloud: 'SonarCloudConnection'
-    organization: 'YOUR-SONARCLOUD-ORG'  # Keep your org name
+    organization: '1bar1'
     scannerMode: 'MSBuild'
-    projectKey: 'YOUR-PROJECT-KEY'  # Keep your project key
+    projectKey: '1bar1'
     projectName: 'HelloWorldPipeline'
 
 - task: DotNetCoreCLI@2
