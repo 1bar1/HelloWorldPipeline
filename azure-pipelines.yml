@@ -40,7 +40,7 @@ steps:
   inputs:
     SonarCloud: 'SonarCloudConnection'
     organization: '1bar1'
-    scannerMode: 'MSBuild'
+    scannerMode: 'dotnet'
     projectKey: '1bar1_HelloWorldPipeline'
     projectName: 'HelloWorldPipeline'
 
