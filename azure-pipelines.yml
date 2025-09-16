@@ -90,7 +90,7 @@ steps:
     command: 'push'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
     nuGetFeedType: 'internal'
-    publishVstsFeed: 'HelloWorldFeed'
+    publishVstsFeed: 'HelloWorldPipeline/HelloWorldFeed'
 
 # Tag artifact name with branch and version
 - script: |
