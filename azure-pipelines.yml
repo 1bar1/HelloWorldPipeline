@@ -34,7 +34,7 @@ steps:
   displayName: 'Increment and print version'
 
 # SonarCloud - ONLY on feature branches (using newer version)
-- task: SonarCloudPrepare@3
+- task: SonarCloudPrepare@7
   condition: eq(variables.isFeature, true)
   displayName: 'Prepare SonarCloud analysis'
   inputs:
@@ -52,7 +52,7 @@ steps:
     arguments: '--configuration $(buildConfiguration) /p:Version=$(buildVersion)'
 
 # SonarCloud analyze - ONLY on feature branches
-- task: SonarCloudAnalyze@3
+- task: SonarCloudAnalyze@7
   condition: eq(variables.isFeature, true)
   displayName: 'Run SonarCloud analysis'
 
